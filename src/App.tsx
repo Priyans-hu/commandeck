@@ -6,6 +6,7 @@ import InboxView from './components/views/InboxView'
 import TicketsView from './components/views/TicketsView'
 import PullRequestsView from './components/views/PullRequestsView'
 import SessionsView from './components/views/SessionsView'
+import SessionPanel from './components/views/SessionPanel'
 import SettingsView from './components/views/SettingsView'
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             <Route path="/tickets" element={<TicketsView />} />
             <Route path="/pull-requests" element={<PullRequestsView />} />
             <Route path="/sessions" element={<SessionsView />} />
+            <Route path="/sessions/:sessionId" element={<SessionPanel />} />
             <Route path="/settings" element={<SettingsView />} />
           </Routes>
         </main>
