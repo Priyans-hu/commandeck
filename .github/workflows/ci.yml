@@ -19,7 +19,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -33,13 +33,10 @@ jobs:
         run: pnpm lint
 
       - name: Type check
-        run: pnpm tsc --noEmit
+        run: pnpm type-check
 
       - name: Test
-        run: pnpm vitest run
-
-      - name: Build
-        run: pnpm build
+        run: pnpm test
 
   rust:
     name: Rust Checks
@@ -71,3 +68,27 @@ jobs:
       - name: Test
         working-directory: src-tauri
         run: cargo test
+
+  landing:
+    name: Landing Page Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: landing
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: landing
+        run: pnpm build

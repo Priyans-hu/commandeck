@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "www/**"
+      - "landing/**"
 
 permissions:
   pages: write
@@ -15,23 +15,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    name: Build Landing Page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: landing
+        run: pnpm install --frozen-lockfile
+
+      - name: Build static export
+        working-directory: landing
+        run: pnpm build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: landing/out
+
   deploy:
     name: Deploy to GitHub Pages
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: www
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
