@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "CommanDeck",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "com.commandeck.app",
   "build": {
     "frontendDist": "../dist",
@@ -35,26 +35,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "12.0"
+    }
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": [
-        {
-          "name": "claude",
-          "cmd": "claude",
-          "args": true
-        }
-      ]
-    },
-    "notification": {
-      "all": true
-    },
-    "sql": {
-      "preload": {
-        "db": "sqlite:commandeck.db"
-      }
+      "open": true
     }
   }
 }
