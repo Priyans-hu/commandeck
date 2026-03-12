@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "How it Works", href: "#how-it-works" },
-  { label: "Tech Stack", href: "#tech-stack" },
+  { label: "Integrations", href: "#integrations" },
+  { label: "Install", href: "#install" },
 ];
 
 export default function Navbar() {
