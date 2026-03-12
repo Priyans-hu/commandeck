@@ -1,0 +1,65 @@
+name: Update Homebrew Cask
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-cask:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get release info
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          DMG_URL="https://github.com/Priyans-hu/commandeck/releases/download/${GITHUB_REF_NAME}/CommanDeck_${VERSION}_aarch64.dmg"
+          echo "dmg_url=$DMG_URL" >> "$GITHUB_OUTPUT"
+
+          curl -sL "$DMG_URL" -o /tmp/CommanDeck.dmg
+          SHA256=$(shasum -a 256 /tmp/CommanDeck.dmg | awk '{print $1}')
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: Priyans-hu/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update cask
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA256: ${{ steps.release.outputs.sha256 }}
+        run: |
+          cat > Casks/commandeck.rb << EOF
+          cask "commandeck" do
+            version "$VERSION"
+            sha256 "$SHA256"
+
+            url "https://github.com/Priyans-hu/commandeck/releases/download/v#{version}/CommanDeck_#{version}_aarch64.dmg"
+            name "CommanDeck"
+            desc "Unified work dashboard — GitHub PRs, Linear tickets, AI sessions"
+            homepage "https://github.com/Priyans-hu/commandeck"
+
+            depends_on macos: ">= :monterey"
+
+            app "CommanDeck.app"
+
+            zap trash: [
+              "~/Library/Application Support/com.commandeck.app",
+              "~/Library/Caches/com.commandeck.app",
+              "~/Library/Preferences/com.commandeck.app.plist",
+            ]
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "Priyanshu"
+          git config user.email "gargpriyanshu2004@gmail.com"
+          git add Casks/commandeck.rb
+          git commit -m "Update commandeck to ${{ steps.release.outputs.version }}"
+          git push
