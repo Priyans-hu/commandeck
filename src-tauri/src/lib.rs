@@ -27,6 +27,8 @@ pub fn run() {
             commands::linear::fetch_teams,
             commands::ai::spawn_claude_session,
             commands::ai::get_active_sessions,
+            commands::ai::get_session_output,
+            commands::ai::send_session_input,
             commands::ai::stop_session,
         ])
         .run(tauri::generate_context!())

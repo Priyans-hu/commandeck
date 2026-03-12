@@ -24,6 +24,9 @@
     "store:allow-keys",
     "process:default",
     "process:allow-exit",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit"
   ]
 }
