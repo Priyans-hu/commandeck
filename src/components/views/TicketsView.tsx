@@ -1,4 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { invoke } from '@tauri-apps/api/core'
+import { useSessionStore } from '../../stores/sessionStore'
 import {
   Search,
   Bot,
@@ -10,7 +13,7 @@ import {
   ArrowDown,
   SignalHigh,
 } from 'lucide-react'
-import type { LinearIssue } from '../../types'
+import type { LinearIssue, AISession } from '../../types'
 
 // ── Mock data ──────────────────────────────────────────────────────────
 
@@ -233,8 +236,25 @@ function FilterDropdown({
 // ── Ticket row ─────────────────────────────────────────────────────────
 
 function TicketRow({ ticket }: { ticket: LinearIssue }) {
+  const navigate = useNavigate()
+  const { addSession } = useSessionStore()
   const prio = PRIORITY_META[ticket.priority]
   const PrioIcon = prio.Icon
+
+  const assignToAI = useCallback(async () => {
+    try {
+      const session = await invoke<AISession>('spawn_claude_session', {
+        taskDescription: `${ticket.title}\n\n${ticket.description || ''}`.trim(),
+        repoPath: null,
+        ticketId: ticket.identifier,
+        model: null,
+      })
+      addSession(session)
+      navigate(`/sessions/${session.id}`)
+    } catch (e) {
+      console.error('Failed to assign to AI:', e)
+    }
+  }, [ticket, addSession, navigate])
 
   return (
     <div className="group flex items-center gap-3 border-b border-border px-4 py-2.5 transition-colors hover:bg-surface-hover">
@@ -303,6 +323,7 @@ function TicketRow({ ticket }: { ticket: LinearIssue }) {
         title="Assign to AI"
         onClick={(e) => {
           e.stopPropagation()
+          assignToAI()
         }}
       >
         <Bot size={12} />
