@@ -1,41 +1,58 @@
-name: Build
+name: Build & Release
 
 on:
   push:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
-    name: Build macOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
-      - uses: Swatinem/rust-cache@v2
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build Tauri app
-        run: pnpm tauri build
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: commandeck-macos
-          path: src-tauri/target/release/bundle/dmg/*.dmg
-          if-no-files-found: error
+          tagName: ${{ github.ref_name }}
+          releaseName: "CommanDeck ${{ github.ref_name }}"
+          releaseBody: |
+            ## What's New
+
+            See the [changelog](https://github.com/Priyans-hu/commandeck/blob/main/CHANGELOG.md) for details.
+
+            ## Installation
+
+            1. Download the `.dmg` file below
+            2. Open the `.dmg` and drag CommanDeck to your Applications folder
+            3. Launch CommanDeck and connect your GitHub and Linear accounts
+
+            **Requirements:** macOS 12 (Monterey) or later
+          releaseDraft: true
+          prerelease: false
