@@ -1,6 +1,6 @@
 export type ViewMode = 'ic' | 'lead'
 
-export type SessionStatus = 'running' | 'completed' | 'failed' | 'cancelled'
+export type SessionStatus = 'running' | 'completed' | 'failed' | 'stopped' | 'waiting_for_input'
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error'
 
@@ -77,19 +77,27 @@ export interface LinearIssue {
 
 export interface AISession {
   id: string
-  ticketId: string
-  ticketUrl: string
-  taskDescription: string
   status: SessionStatus
-  model: string
-  repo: string
-  branch: string
-  startedAt: string
-  completedAt: string | null
-  duration: string
-  filesChanged?: number
-  resultSummary: string | null
-  logsUrl: string | null
+  ticket_id: string | null
+  task_description: string
+  started_at: string
+  model: string | null
+}
+
+export interface SessionOutputLine {
+  timestamp: string
+  stream: 'stdout' | 'stderr' | 'user_input'
+  content: string
+}
+
+export interface SessionOutputEvent {
+  session_id: string
+  line: SessionOutputLine
+}
+
+export interface SessionStatusEvent {
+  session_id: string
+  status: SessionStatus
 }
 
 export interface Notification {
