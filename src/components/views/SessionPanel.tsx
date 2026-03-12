@@ -50,7 +50,7 @@ const statusConfig: Record<
     badgeClass: 'bg-danger/10 text-danger border-danger/20',
     icon: AlertCircle,
   },
-  cancelled: {
+  stopped: {
     label: 'Session stopped',
     dotClass: 'bg-text-secondary',
     badgeClass:
@@ -133,7 +133,7 @@ export default function SessionPanel() {
   const isTerminal =
     session?.status === 'completed' ||
     session?.status === 'failed' ||
-    session?.status === 'cancelled'
+    session?.status === 'stopped'
 
   // Set active session on mount, load history
   useEffect(() => {
@@ -238,7 +238,7 @@ export default function SessionPanel() {
       ? 'Type your response...'
       : 'Send a message...'
 
-  const titleText = [session?.ticketId, session?.taskDescription]
+  const titleText = [session?.ticket_id, session?.task_description]
     .filter(Boolean)
     .join(' - ')
 

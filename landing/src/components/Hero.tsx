@@ -100,7 +100,9 @@ export default function Hero() {
             className="mt-8 flex flex-col items-center gap-3 sm:mt-10 sm:flex-row sm:gap-4"
           >
             <a
-              href="#download"
+              href="https://github.com/Priyans-hu/commandeck/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
               className="group flex items-center gap-2.5 rounded-xl bg-accent px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition-all duration-200 hover:bg-accent-light hover:shadow-xl hover:shadow-accent/30 sm:text-base"
             >
               <Download className="h-4.5 w-4.5" />

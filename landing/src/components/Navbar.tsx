@@ -82,7 +82,9 @@ export default function Navbar() {
             GitHub
           </a>
           <a
-            href="#download"
+            href="https://github.com/Priyans-hu/commandeck/releases/latest"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent-light hover:shadow-accent/30"
           >
             <Download className="h-4 w-4" />
@@ -132,7 +134,9 @@ export default function Navbar() {
                   GitHub
                 </a>
                 <a
-                  href="#download"
+                  href="https://github.com/Priyans-hu/commandeck/releases/latest"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent-light"
                 >
