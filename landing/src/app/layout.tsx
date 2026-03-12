@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "CommanDeck — Unified Command Center for Engineers",
   description:
     "One dashboard for tickets, PRs, AI sessions, and team updates. Stop context switching. Start shipping.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.svg",
+  },
   openGraph: {
     title: "CommanDeck",
     description: "Unified command center for engineering work",
