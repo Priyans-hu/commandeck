@@ -11,11 +11,13 @@ import {
   Terminal,
   Wrench,
   Code2,
+  Beer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { id: "download", label: "Download", icon: Download, recommended: true },
+  { id: "download", label: "Download", icon: Download },
+  { id: "homebrew", label: "Homebrew", icon: Beer, recommended: true },
   { id: "build", label: "Build from Source", icon: Wrench },
   { id: "dev", label: "Development", icon: Code2 },
 ] as const;
@@ -104,18 +106,21 @@ function DownloadTab() {
     <div className="space-y-1">
       <Step number={1} icon={Download} title="Download the latest release">
         <p className="mb-4">
-          Grab the latest <code className="rounded bg-surface-hover px-1.5 py-0.5 text-accent-light">.dmg</code> file
-          from GitHub Releases.
+          First release coming soon. In the meantime, you can{" "}
+          <button
+            onClick={() => document.querySelector<HTMLButtonElement>('[data-tab="build"]')?.click()}
+            className="text-accent-light underline underline-offset-2 hover:text-accent"
+          >
+            build from source
+          </button>{" "}
+          or install via Homebrew.
         </p>
-        <a
-          href="https://github.com/Priyans-hu/commandeck/releases/latest"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2.5 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition-all hover:bg-accent-light hover:shadow-accent/35"
-        >
-          <Download className="h-4.5 w-4.5" />
-          Download for macOS
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <span className="inline-flex items-center gap-2.5 rounded-lg bg-accent/20 px-6 py-3 text-sm font-semibold text-accent-light cursor-default">
+            <Download className="h-4.5 w-4.5" />
+            Download for macOS — Coming Soon
+          </span>
+        </div>
         <p className="mt-3 text-xs text-text-muted">
           macOS 12 (Monterey) or later required
         </p>
@@ -123,7 +128,7 @@ function DownloadTab() {
 
       <Step number={2} icon={FolderOpen} title="Install the app">
         <p>
-          Open the downloaded <code className="rounded bg-surface-hover px-1.5 py-0.5 text-accent-light">.dmg</code> file
+          Once released, open the downloaded <code className="rounded bg-surface-hover px-1.5 py-0.5 text-accent-light">.dmg</code> file
           and drag CommanDeck into your Applications folder.
         </p>
       </Step>
@@ -186,6 +191,40 @@ pnpm tauri build`}
   );
 }
 
+function BrewTab() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-text-muted">
+          Install via Homebrew
+        </h4>
+        <CodeBlock
+          code={`brew tap Priyans-hu/tap
+brew install commandeck`}
+        />
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-border bg-surface-card p-4">
+        <Terminal className="mt-0.5 h-4 w-4 shrink-0 text-accent-light" />
+        <p className="text-sm text-text-secondary">
+          This will install the latest release of CommanDeck as a native macOS app.
+          Updates are available via{" "}
+          <code className="rounded bg-surface-hover px-1.5 py-0.5 text-accent-light">
+            brew upgrade commandeck
+          </code>
+        </p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/5 p-4">
+        <Rocket className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+        <p className="text-sm text-text-secondary">
+          Homebrew tap coming soon. Star the repo to get notified when it&apos;s ready.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function DevTab() {
   return (
     <div className="space-y-6">
@@ -215,6 +254,7 @@ pnpm tauri dev`}
 
 const tabContent: Record<TabId, React.ComponentType> = {
   download: DownloadTab,
+  homebrew: BrewTab,
   build: BuildTab,
   dev: DevTab,
 };
