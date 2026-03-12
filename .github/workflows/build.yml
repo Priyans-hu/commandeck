@@ -51,7 +51,13 @@ jobs:
 
             1. Download the `.dmg` file below
             2. Open the `.dmg` and drag CommanDeck to your Applications folder
-            3. Launch CommanDeck and connect your GitHub and Linear accounts
+            3. **Important:** Before launching, run this in Terminal to remove the quarantine flag:
+               ```
+               xattr -cr /Applications/CommanDeck.app
+               ```
+            4. Launch CommanDeck and connect your GitHub and Linear accounts
+
+            > **Note:** macOS may show "CommanDeck is damaged" because the app is not yet code-signed with an Apple Developer certificate. The `xattr` command above safely removes the quarantine attribute.
 
             **Requirements:** macOS 12 (Monterey) or later
           releaseDraft: true
