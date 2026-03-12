@@ -61,14 +61,14 @@ export default function Footer() {
 
           {/* Right — License */}
           <p className="text-sm text-text-muted">
-            Open Source &mdash; MIT License
+            Open Source &mdash; AGPL-3.0 License
           </p>
         </div>
 
         {/* Bottom — Copyright */}
         <div className="mt-8 border-t border-border/50 pt-6 text-center">
           <p className="text-xs text-text-muted">
-            &copy; 2025 CommanDeck. All rights reserved.
+            &copy; 2026 CommanDeck. All rights reserved.
           </p>
         </div>
       </div>

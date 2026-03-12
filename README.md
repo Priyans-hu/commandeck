@@ -102,4 +102,6 @@ For detailed architecture documentation, see `docs/`.
 
 ## License
 
-[MIT](LICENSE) -- Copyright 2025 Priyanshu
+[AGPL-3.0](LICENSE) -- Copyright 2026 Priyanshu
+
+This means you're free to use, modify, and distribute CommanDeck, but any modified version must also be released under AGPL-3.0 and contributed back.
