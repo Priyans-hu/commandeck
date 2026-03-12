@@ -1,0 +1,35 @@
+# CommanDeck
+
+> Unified work dashboard for engineers. Integrates Linear tickets, GitHub PRs, Slack, and AI task dispatch.
+
+## Overview
+Desktop app (Tauri v2 + React) that aggregates engineering workflow tools. View tickets, review PRs, track AI coding sessions, dispatch tasks to AI agents.
+
+## Tech Stack
+- Frontend: React 19, TypeScript, Tailwind CSS v4, Zustand
+- Backend: Rust (Tauri v2)
+- Database: SQLite (local)
+- Integrations: GitHub API, Linear GraphQL API, Slack API
+- AI: Claude Code CLI dispatch with MCP servers
+
+## Architecture
+- Orchestrator pattern: Sync Engine, Task Dispatcher, Session Manager, Notification Engine
+- API-based data fetching for UI, MCP-based tool access for AI agents
+- Local SQLite for caching, session history, settings
+
+## Key Features
+- Unified inbox for PRs, tickets, mentions
+- Inline PR diff viewer with approve/comment
+- Linear ticket management
+- AI task dispatch to Claude Code
+- Session tracking with logs
+- Team view for managers/leads
+- Native OS notifications
+
+## Structure
+- /src - React frontend
+- /src-tauri - Rust backend
+- /src/components/views - View components (Inbox, Tickets, PRs, Sessions, Settings)
+- /src/stores - Zustand state stores
+- /src/types - TypeScript types
+- /www - Landing page
