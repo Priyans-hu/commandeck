@@ -244,16 +244,11 @@ pub async fn fetch_pr_diff(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format!(
-            "fetch_pr_diff: GitHub API returned {}: {}",
-            status, body
-        ));
+        return Err(format!("fetch_pr_diff: GitHub API returned {}: {}", status, body));
     }
 
-    let files: Vec<RestFileChange> = resp
-        .json()
-        .await
-        .map_err(|e| format!("fetch_pr_diff: failed to parse response: {}", e))?;
+    let files: Vec<RestFileChange> =
+        resp.json().await.map_err(|e| format!("fetch_pr_diff: failed to parse response: {}", e))?;
 
     Ok(files
         .into_iter()
@@ -303,10 +298,7 @@ pub async fn submit_pr_review(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format!(
-            "submit_pr_review: GitHub API returned {}: {}",
-            status, body
-        ));
+        return Err(format!("submit_pr_review: GitHub API returned {}: {}", status, body));
     }
 
     Ok("Review submitted successfully".to_string())
@@ -338,21 +330,15 @@ async fn send_github_graphql(
         return Err(format!("GitHub GraphQL returned {}: {}", status, text));
     }
 
-    let gql: GqlResponse = resp
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse GitHub GraphQL response: {}", e))?;
+    let gql: GqlResponse =
+        resp.json().await.map_err(|e| format!("Failed to parse GitHub GraphQL response: {}", e))?;
 
     if let Some(errors) = gql.errors {
         let msgs: Vec<String> = errors.into_iter().map(|e| e.message).collect();
         return Err(format!("GitHub GraphQL errors: {}", msgs.join("; ")));
     }
 
-    Ok(gql
-        .data
-        .and_then(|d| d.search)
-        .map(|s| s.nodes)
-        .unwrap_or_default())
+    Ok(gql.data.and_then(|d| d.search).map(|s| s.nodes).unwrap_or_default())
 }
 
 #[cfg(test)]

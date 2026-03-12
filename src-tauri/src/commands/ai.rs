@@ -113,23 +113,14 @@ pub async fn spawn_claude_session(
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| {
-        format!("spawn_claude_session: failed to spawn claude process: {}", e)
-    })?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("spawn_claude_session: failed to spawn claude process: {}", e))?;
 
     // Take ownership of stdin, stdout, stderr
-    let stdin = child
-        .stdin
-        .take()
-        .ok_or("spawn_claude_session: failed to capture stdin")?;
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or("spawn_claude_session: failed to capture stdout")?;
-    let stderr = child
-        .stderr
-        .take()
-        .ok_or("spawn_claude_session: failed to capture stderr")?;
+    let stdin = child.stdin.take().ok_or("spawn_claude_session: failed to capture stdin")?;
+    let stdout = child.stdout.take().ok_or("spawn_claude_session: failed to capture stdout")?;
+    let stderr = child.stderr.take().ok_or("spawn_claude_session: failed to capture stderr")?;
 
     let stdin = Arc::new(tokio::sync::Mutex::new(stdin));
 
@@ -144,9 +135,8 @@ pub async fn spawn_claude_session(
 
     // Store session handle
     {
-        let mut store = sessions()
-            .lock()
-            .map_err(|e| format!("spawn_claude_session: lock error: {}", e))?;
+        let mut store =
+            sessions().lock().map_err(|e| format!("spawn_claude_session: lock error: {}", e))?;
         store.insert(
             session_id.clone(),
             SessionHandle {
@@ -203,10 +193,7 @@ pub async fn spawn_claude_session(
             // Emit to frontend
             let _ = app_stdout.emit(
                 "session-output",
-                SessionOutputEvent {
-                    session_id: sid_stdout.clone(),
-                    line: output_line.clone(),
-                },
+                SessionOutputEvent { session_id: sid_stdout.clone(), line: output_line.clone() },
             );
 
             // Store in buffer
@@ -238,10 +225,7 @@ pub async fn spawn_claude_session(
 
             let _ = app_stderr.emit(
                 "session-output",
-                SessionOutputEvent {
-                    session_id: sid_stderr.clone(),
-                    line: output_line.clone(),
-                },
+                SessionOutputEvent { session_id: sid_stderr.clone(), line: output_line.clone() },
             );
 
             if let Ok(mut store) = sessions().lock() {
@@ -254,9 +238,8 @@ pub async fn spawn_claude_session(
 
     // Store abort handle for cleanup
     {
-        let mut store = sessions()
-            .lock()
-            .map_err(|e| format!("spawn_claude_session: lock error: {}", e))?;
+        let mut store =
+            sessions().lock().map_err(|e| format!("spawn_claude_session: lock error: {}", e))?;
         if let Some(handle) = store.get_mut(&session_id) {
             handle.abort_handle = Some(stdout_task.abort_handle());
         }
@@ -287,10 +270,7 @@ pub async fn spawn_claude_session(
 
         let _ = app_exit.emit(
             "session-status-changed",
-            SessionStatusEvent {
-                session_id: sid_exit,
-                status: new_status,
-            },
+            SessionStatusEvent { session_id: sid_exit, status: new_status },
         );
     });
 
@@ -305,9 +285,8 @@ pub async fn send_session_input(
 ) -> Result<(), String> {
     // Get the stdin handle
     let stdin = {
-        let mut store = sessions()
-            .lock()
-            .map_err(|e| format!("send_session_input: lock error: {}", e))?;
+        let mut store =
+            sessions().lock().map_err(|e| format!("send_session_input: lock error: {}", e))?;
 
         let handle = store
             .get_mut(&session_id)
@@ -324,20 +303,14 @@ pub async fn send_session_input(
         // Emit user input event so frontend shows it immediately
         let _ = app.emit(
             "session-output",
-            SessionOutputEvent {
-                session_id: session_id.clone(),
-                line: user_line,
-            },
+            SessionOutputEvent { session_id: session_id.clone(), line: user_line },
         );
 
         // Update status to running
         handle.info.status = SessionStatus::Running;
         let _ = app.emit(
             "session-status-changed",
-            SessionStatusEvent {
-                session_id: session_id.clone(),
-                status: SessionStatus::Running,
-            },
+            SessionStatusEvent { session_id: session_id.clone(), status: SessionStatus::Running },
         );
 
         handle
@@ -362,21 +335,14 @@ pub async fn send_session_input(
         .write_all(msg.as_bytes())
         .await
         .map_err(|e| format!("send_session_input: failed to write: {}", e))?;
-    stdin_lock
-        .flush()
-        .await
-        .map_err(|e| format!("send_session_input: failed to flush: {}", e))?;
+    stdin_lock.flush().await.map_err(|e| format!("send_session_input: failed to flush: {}", e))?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub async fn get_session_output(
-    session_id: String,
-) -> Result<Vec<SessionOutputLine>, String> {
-    let store = sessions()
-        .lock()
-        .map_err(|e| format!("get_session_output: lock error: {}", e))?;
+pub async fn get_session_output(session_id: String) -> Result<Vec<SessionOutputLine>, String> {
+    let store = sessions().lock().map_err(|e| format!("get_session_output: lock error: {}", e))?;
 
     let handle = store
         .get(&session_id)
@@ -387,9 +353,7 @@ pub async fn get_session_output(
 
 #[tauri::command]
 pub async fn get_active_sessions() -> Result<Vec<AiSession>, String> {
-    let store = sessions()
-        .lock()
-        .map_err(|e| format!("get_active_sessions: lock error: {}", e))?;
+    let store = sessions().lock().map_err(|e| format!("get_active_sessions: lock error: {}", e))?;
 
     Ok(store.values().map(|h| h.info.clone()).collect())
 }
@@ -397,9 +361,8 @@ pub async fn get_active_sessions() -> Result<Vec<AiSession>, String> {
 #[tauri::command]
 pub async fn stop_session(app: tauri::AppHandle, session_id: String) -> Result<String, String> {
     let (stdin_opt, abort_opt) = {
-        let mut store = sessions()
-            .lock()
-            .map_err(|e| format!("stop_session: lock error: {}", e))?;
+        let mut store =
+            sessions().lock().map_err(|e| format!("stop_session: lock error: {}", e))?;
 
         let handle = store
             .get_mut(&session_id)
@@ -424,10 +387,7 @@ pub async fn stop_session(app: tauri::AppHandle, session_id: String) -> Result<S
 
     let _ = app.emit(
         "session-status-changed",
-        SessionStatusEvent {
-            session_id: session_id.clone(),
-            status: SessionStatus::Stopped,
-        },
+        SessionStatusEvent { session_id: session_id.clone(), status: SessionStatus::Stopped },
     );
 
     Ok(format!("Session '{}' stopped", session_id))
@@ -482,18 +442,11 @@ fn extract_content_from_stream_json(json_line: &str) -> String {
         }
 
         // Result message — final output
-        "result" => parsed
-            .get("result")
-            .and_then(|r| r.as_str())
-            .unwrap_or("")
-            .to_string(),
+        "result" => parsed.get("result").and_then(|r| r.as_str()).unwrap_or("").to_string(),
 
         // Tool use events — show what the agent is doing
         "tool_use" => {
-            let tool_name = parsed
-                .get("name")
-                .and_then(|n| n.as_str())
-                .unwrap_or("unknown");
+            let tool_name = parsed.get("name").and_then(|n| n.as_str()).unwrap_or("unknown");
             format!("[Using tool: {}]", tool_name)
         }
 
@@ -527,9 +480,7 @@ fn extract_content_from_stream_json(json_line: &str) -> String {
 
 fn uuid_v4() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let d = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let d = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     let seed = d.as_nanos();
     format!(
         "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
@@ -543,9 +494,7 @@ fn uuid_v4() -> String {
 
 fn chrono_now() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let d = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
+    let d = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     let secs = d.as_secs();
     let days = secs / 86400;
     let time_of_day = secs % 86400;
@@ -564,20 +513,8 @@ fn chrono_now() -> String {
         y += 1;
     }
     let leap = is_leap(y);
-    let month_days: [i64; 12] = [
-        31,
-        if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
-    ];
+    let month_days: [i64; 12] =
+        [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     let mut m = 0usize;
     for (i, &md) in month_days.iter().enumerate() {
         if remaining < md {
@@ -622,8 +559,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&session).expect("serialize AiSession");
-        let deserialized: AiSession =
-            serde_json::from_str(&json).expect("deserialize AiSession");
+        let deserialized: AiSession = serde_json::from_str(&json).expect("deserialize AiSession");
 
         assert_eq!(deserialized.id, "sess-001");
         assert_eq!(deserialized.task_description, "Fix the login bug");
@@ -636,8 +572,7 @@ mod tests {
         let json = serde_json::to_string(&status).unwrap();
         assert_eq!(json, "\"waiting_for_input\"");
 
-        let deserialized: SessionStatus =
-            serde_json::from_str("\"waiting_for_input\"").unwrap();
+        let deserialized: SessionStatus = serde_json::from_str("\"waiting_for_input\"").unwrap();
         assert!(matches!(deserialized, SessionStatus::WaitingForInput));
     }
 
@@ -695,19 +630,13 @@ mod tests {
     #[test]
     fn extract_tool_use() {
         let json = r#"{"type":"tool_use","name":"Edit"}"#;
-        assert_eq!(
-            extract_content_from_stream_json(json),
-            "[Using tool: Edit]"
-        );
+        assert_eq!(extract_content_from_stream_json(json), "[Using tool: Edit]");
     }
 
     #[test]
     fn extract_error_event() {
         let json = r#"{"type":"error","error":{"message":"Rate limited"}}"#;
-        assert_eq!(
-            extract_content_from_stream_json(json),
-            "[Error: Rate limited]"
-        );
+        assert_eq!(extract_content_from_stream_json(json), "[Error: Rate limited]");
     }
 
     #[test]

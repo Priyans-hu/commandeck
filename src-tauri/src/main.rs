@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-  commandeck_lib::run();
+    commandeck_lib::run();
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { invoke } from '@tauri-apps/api/core'
 import {
@@ -7,15 +7,10 @@ import {
   X,
   Minus,
   Terminal,
-  GitBranch,
-  FileCode,
   RotateCcw,
   Square,
-  ExternalLink,
   Cpu,
   Clock,
-  Diff,
-  Eye,
   Bot,
   Loader2,
   FolderOpen,
@@ -186,19 +181,12 @@ function SessionCard({ session }: { session: AISession }) {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 border-t border-border pt-3.5">
+        <div className="flex items-center gap-2 border-t border-border pt-3.5" onClick={(e) => e.stopPropagation()}>
           <ActionButton icon={Terminal} variant="accent" onClick={openSession}>
             Open Session
           </ActionButton>
           {(session.status === 'running' || session.status === 'waiting_for_input') && (
-            <ActionButton
-              icon={Square}
-              variant="danger"
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation()
-                stopSession()
-              } as unknown as () => void}
-            >
+            <ActionButton icon={Square} variant="danger" onClick={stopSession}>
               Stop
             </ActionButton>
           )}

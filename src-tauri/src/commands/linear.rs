@@ -202,14 +202,8 @@ pub async fn fetch_issues(
             identifier: n.identifier,
             title: n.title,
             description: n.description,
-            state: IssueState {
-                name: n.state.name,
-                color: n.state.color,
-            },
-            priority: IssuePriority {
-                label: n.priority_label,
-                number: n.priority as i32,
-            },
+            state: IssueState { name: n.state.name, color: n.state.color },
+            priority: IssuePriority { label: n.priority_label, number: n.priority as i32 },
             assignee_name: n.assignee.map(|a| a.name),
             labels: n.labels.nodes.into_iter().map(|l| l.name).collect(),
             created_at: n.created_at,
@@ -256,10 +250,7 @@ pub async fn update_issue_status(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        return Err(format!(
-            "update_issue_status: Linear API returned {}: {}",
-            status, text
-        ));
+        return Err(format!("update_issue_status: Linear API returned {}: {}", status, text));
     }
 
     let gql: GqlResponse<UpdateIssueData> = resp
@@ -297,11 +288,7 @@ pub async fn fetch_teams(api_key: String) -> Result<Vec<LinearTeam>, String> {
         .teams
         .nodes
         .into_iter()
-        .map(|t| LinearTeam {
-            id: t.id,
-            name: t.name,
-            key: t.key,
-        })
+        .map(|t| LinearTeam { id: t.id, name: t.name, key: t.key })
         .collect())
 }
 
@@ -331,18 +318,15 @@ async fn send_linear_graphql<T: serde::de::DeserializeOwned>(
         return Err(format!("Linear API returned {}: {}", status, text));
     }
 
-    let gql: GqlResponse<T> = resp
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse Linear GraphQL response: {}", e))?;
+    let gql: GqlResponse<T> =
+        resp.json().await.map_err(|e| format!("Failed to parse Linear GraphQL response: {}", e))?;
 
     if let Some(errors) = gql.errors {
         let msgs: Vec<String> = errors.into_iter().map(|e| e.message).collect();
         return Err(format!("Linear GraphQL errors: {}", msgs.join("; ")));
     }
 
-    gql.data
-        .ok_or_else(|| "Linear GraphQL response contained no data".to_string())
+    gql.data.ok_or_else(|| "Linear GraphQL response contained no data".to_string())
 }
 
 #[cfg(test)]
@@ -356,14 +340,8 @@ mod tests {
             identifier: "SER-1234".to_string(),
             title: "Fix auth flow".to_string(),
             description: Some("The login page has a bug".to_string()),
-            state: IssueState {
-                name: "In Progress".to_string(),
-                color: "#f2c94c".to_string(),
-            },
-            priority: IssuePriority {
-                label: "High".to_string(),
-                number: 2,
-            },
+            state: IssueState { name: "In Progress".to_string(), color: "#f2c94c".to_string() },
+            priority: IssuePriority { label: "High".to_string(), number: 2 },
             assignee_name: Some("Priyanshu".to_string()),
             labels: vec!["bug".to_string(), "auth".to_string()],
             created_at: "2026-01-01T00:00:00Z".to_string(),
@@ -394,14 +372,8 @@ mod tests {
             identifier: "SER-5678".to_string(),
             title: "Unassigned task".to_string(),
             description: None,
-            state: IssueState {
-                name: "Backlog".to_string(),
-                color: "#bbb".to_string(),
-            },
-            priority: IssuePriority {
-                label: "No priority".to_string(),
-                number: 0,
-            },
+            state: IssueState { name: "Backlog".to_string(), color: "#bbb".to_string() },
+            priority: IssuePriority { label: "No priority".to_string(), number: 0 },
             assignee_name: None,
             labels: vec![],
             created_at: "2026-01-01T00:00:00Z".to_string(),
@@ -425,8 +397,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&team).expect("serialize LinearTeam");
-        let deserialized: LinearTeam =
-            serde_json::from_str(&json).expect("deserialize LinearTeam");
+        let deserialized: LinearTeam = serde_json::from_str(&json).expect("deserialize LinearTeam");
 
         assert_eq!(deserialized.id, "team-abc");
         assert_eq!(deserialized.name, "Platform");
@@ -435,10 +406,7 @@ mod tests {
 
     #[test]
     fn issue_state_serialization() {
-        let state = IssueState {
-            name: "Done".to_string(),
-            color: "#27ae60".to_string(),
-        };
+        let state = IssueState { name: "Done".to_string(), color: "#27ae60".to_string() };
 
         let json = serde_json::to_string(&state).unwrap();
         assert!(json.contains("Done"));
@@ -447,10 +415,7 @@ mod tests {
 
     #[test]
     fn issue_priority_serialization() {
-        let priority = IssuePriority {
-            label: "Urgent".to_string(),
-            number: 1,
-        };
+        let priority = IssuePriority { label: "Urgent".to_string(), number: 1 };
 
         let json = serde_json::to_string(&priority).unwrap();
         let deserialized: IssuePriority = serde_json::from_str(&json).unwrap();
