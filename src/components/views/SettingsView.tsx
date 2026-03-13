@@ -425,6 +425,68 @@ function LinearIcon({ size = 18, className = '' }: { size?: number; className?: 
 }
 
 // ---------------------------------------------------------------------------
+// Update checker
+// ---------------------------------------------------------------------------
+
+const CURRENT_VERSION = '0.2.0'
+
+function UpdateChecker() {
+  const [state, setState] = useState<'idle' | 'checking' | 'up-to-date' | 'update-available' | 'error'>('idle')
+  const [latestVersion, setLatestVersion] = useState<string | null>(null)
+
+  const checkForUpdates = async () => {
+    setState('checking')
+    try {
+      const resp = await fetch('https://api.github.com/repos/Priyans-hu/commandeck/releases/latest')
+      if (!resp.ok) throw new Error(`GitHub API returned ${resp.status}`)
+      const data = await resp.json()
+      const tag = (data.tag_name as string).replace(/^v/, '')
+      setLatestVersion(tag)
+      setState(tag === CURRENT_VERSION ? 'up-to-date' : 'update-available')
+    } catch {
+      setState('error')
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
+      <div>
+        <p className="text-sm font-medium text-text-primary">App Version</p>
+        <div className="flex items-center gap-2">
+          <p className="font-mono text-xs text-text-secondary">v{CURRENT_VERSION}</p>
+          {state === 'up-to-date' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+              <CheckCircle2 size={10} /> Up to date
+            </span>
+          )}
+          {state === 'update-available' && latestVersion && (
+            <a
+              href="https://github.com/Priyans-hu/commandeck/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent hover:underline"
+            >
+              v{latestVersion} available
+            </a>
+          )}
+          {state === 'error' && (
+            <span className="text-[10px] text-danger">Failed to check</span>
+          )}
+        </div>
+      </div>
+      <button
+        onClick={checkForUpdates}
+        disabled={state === 'checking'}
+        className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-accent hover:text-text-primary disabled:opacity-50"
+      >
+        <RefreshCw size={12} className={state === 'checking' ? 'animate-spin' : ''} />
+        {state === 'checking' ? 'Checking...' : 'Check for updates'}
+      </button>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // AI model options
 // ---------------------------------------------------------------------------
 
@@ -859,16 +921,7 @@ export default function SettingsView() {
         description="CommanDeck — your developer command center"
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-text-primary">App Version</p>
-              <p className="font-mono text-xs text-text-secondary">v0.1.0</p>
-            </div>
-            <button className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-accent hover:text-text-primary">
-              <RefreshCw size={12} />
-              Check for updates
-            </button>
-          </div>
+          <UpdateChecker />
 
           <div className="flex gap-3">
             <a
