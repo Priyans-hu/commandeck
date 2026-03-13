@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useAppStore } from './stores/appStore'
 import { useSettingsStore } from './stores/settingsStore'
@@ -10,11 +10,16 @@ import PullRequestsView from './components/views/PullRequestsView'
 import SessionsView from './components/views/SessionsView'
 import SessionPanel from './components/views/SessionPanel'
 import SettingsView from './components/views/SettingsView'
+import OnboardingWizard from './components/onboarding/OnboardingWizard'
+import CommandPalette from './components/CommandPalette'
 
 function App() {
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
   const theme = useSettingsStore((s) => s.appearance.theme)
   const density = useSettingsStore((s) => s.appearance.density)
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted)
+
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -23,6 +28,22 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-density', density)
   }, [density])
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault()
+      setPaletteOpen((prev) => !prev)
+    }
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
+
+  if (!onboardingCompleted) {
+    return <OnboardingWizard />
+  }
 
   return (
     <div className="flex h-screen bg-surface" data-theme={theme} data-density={density}>
@@ -43,6 +64,7 @@ function App() {
           </Routes>
         </main>
       </div>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   )
 }

@@ -443,6 +443,7 @@ export default function SettingsView() {
 
   // Local form state -- connections
   const [ghToken, setGhToken] = useState(store.githubToken)
+  const [ghUsername, setGhUsername] = useState(store.githubUsername)
   const [linearKey, setLinearKey] = useState(store.linearApiKey)
   const [slackToken, setSlackToken] = useState(store.slackBotToken)
 
@@ -500,6 +501,7 @@ export default function SettingsView() {
   // Save handlers
   const saveConnections = () => {
     store.setGithubToken(ghToken)
+    store.setGithubUsername(ghUsername)
     store.setLinearApiKey(linearKey)
     store.setSlackBotToken(slackToken)
   }
@@ -563,6 +565,21 @@ export default function SettingsView() {
             status={store.connections.github}
             onTest={() => testConnection('github')}
           />
+          <div className="rounded-lg border border-border bg-surface p-4">
+            <label className="mb-1.5 block text-xs font-medium text-text-secondary">
+              GitHub Username
+            </label>
+            <input
+              type="text"
+              value={ghUsername}
+              onChange={(e) => setGhUsername(e.target.value)}
+              placeholder="your-github-username"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+            <p className="mt-1 text-[11px] text-text-secondary">
+              Used to fetch your pull requests and identify authored vs review-requested PRs
+            </p>
+          </div>
           <ConnectionRow
             icon={LinearIcon}
             name="Linear"

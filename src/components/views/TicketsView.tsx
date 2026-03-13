@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { invoke } from '@tauri-apps/api/core'
 import { useSessionStore } from '../../stores/sessionStore'
+import { useTickets } from '../../hooks/useTickets'
 import {
   Search,
   Bot,
@@ -12,125 +13,11 @@ import {
   Minus,
   ArrowDown,
   SignalHigh,
+  X,
+  ExternalLink,
+  Clock,
 } from 'lucide-react'
 import type { LinearIssue, AISession } from '../../types'
-
-// ── Mock data ──────────────────────────────────────────────────────────
-
-const MOCK_TICKETS: LinearIssue[] = [
-  {
-    id: '1',
-    identifier: 'SER-1234',
-    title: 'Fix authentication token refresh failing silently on session expiry',
-    description: '',
-    state: { id: 's1', name: 'In Progress', color: '#f59e0b', type: 'started' },
-    priority: 1,
-    assignee: { name: 'Priyanshu Garg', avatar: '' },
-    team: { id: 't1', name: 'Server', key: 'SER', icon: '' },
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'bug', color: '#ef4444' }, { name: 'auth', color: '#6366f1' }],
-  },
-  {
-    id: '2',
-    identifier: 'SER-1235',
-    title: 'Add rate limiting to public API endpoints',
-    description: '',
-    state: { id: 's2', name: 'Todo', color: '#94a3b8', type: 'unstarted' },
-    priority: 2,
-    assignee: { name: 'Amit Sharma', avatar: '' },
-    team: { id: 't1', name: 'Server', key: 'SER', icon: '' },
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'security', color: '#f59e0b' }],
-  },
-  {
-    id: '3',
-    identifier: 'FE-892',
-    title: 'Dashboard widgets layout breaks on viewport < 1024px',
-    description: '',
-    state: { id: 's3', name: 'In Review', color: '#6366f1', type: 'started' },
-    priority: 2,
-    assignee: { name: 'Neha Patel', avatar: '' },
-    team: { id: 't2', name: 'Frontend', key: 'FE', icon: '' },
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'bug', color: '#ef4444' }, { name: 'responsive', color: '#22c55e' }],
-  },
-  {
-    id: '4',
-    identifier: 'SER-1236',
-    title: 'Migrate user accounts to new billing provider',
-    description: '',
-    state: { id: 's1', name: 'In Progress', color: '#f59e0b', type: 'started' },
-    priority: 1,
-    assignee: null,
-    team: { id: 't1', name: 'Server', key: 'SER', icon: '' },
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'migration', color: '#8b5cf6' }],
-  },
-  {
-    id: '5',
-    identifier: 'FE-893',
-    title: 'Implement dark mode toggle in user preferences',
-    description: '',
-    state: { id: 's4', name: 'Done', color: '#22c55e', type: 'completed' },
-    priority: 3,
-    assignee: { name: 'Ravi Kumar', avatar: '' },
-    team: { id: 't2', name: 'Frontend', key: 'FE', icon: '' },
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'feature', color: '#22c55e' }, { name: 'ux', color: '#f472b6' }],
-  },
-  {
-    id: '6',
-    identifier: 'SER-1237',
-    title: 'Webhook delivery retries not respecting exponential backoff',
-    description: '',
-    state: { id: 's2', name: 'Todo', color: '#94a3b8', type: 'unstarted' },
-    priority: 0,
-    assignee: { name: 'Priyanshu Garg', avatar: '' },
-    team: { id: 't1', name: 'Server', key: 'SER', icon: '' },
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'bug', color: '#ef4444' }, { name: 'webhooks', color: '#06b6d4' }],
-  },
-  {
-    id: '7',
-    identifier: 'FE-894',
-    title: 'Add keyboard shortcuts for common navigation actions',
-    description: '',
-    state: { id: 's2', name: 'Todo', color: '#94a3b8', type: 'unstarted' },
-    priority: 4,
-    assignee: null,
-    team: { id: 't2', name: 'Frontend', key: 'FE', icon: '' },
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'feature', color: '#22c55e' }],
-  },
-  {
-    id: '8',
-    identifier: 'SER-1238',
-    title: 'Database connection pool exhausted under high concurrency',
-    description: '',
-    state: { id: 's1', name: 'In Progress', color: '#f59e0b', type: 'started' },
-    priority: 1,
-    assignee: { name: 'Amit Sharma', avatar: '' },
-    team: { id: 't1', name: 'Server', key: 'SER', icon: '' },
-    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    url: '',
-    labels: [{ name: 'critical', color: '#ef4444' }, { name: 'infra', color: '#94a3b8' }],
-  },
-]
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -164,6 +51,16 @@ function timeAgo(dateStr: string): string {
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   return `${days}d ago`
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function getInitials(name: string): string {
@@ -233,9 +130,15 @@ function FilterDropdown({
   )
 }
 
-// ── Ticket row ─────────────────────────────────────────────────────────
+// ── Ticket Detail Panel ────────────────────────────────────────────────
 
-function TicketRow({ ticket }: { ticket: LinearIssue }) {
+function TicketDetailPanel({
+  ticket,
+  onClose,
+}: {
+  ticket: LinearIssue
+  onClose: () => void
+}) {
   const navigate = useNavigate()
   const { addSession } = useSessionStore()
   const prio = PRIORITY_META[ticket.priority]
@@ -257,7 +160,190 @@ function TicketRow({ ticket }: { ticket: LinearIssue }) {
   }, [ticket, addSession, navigate])
 
   return (
-    <div className="group flex items-center gap-3 border-b border-border px-4 py-2.5 transition-colors hover:bg-surface-hover">
+    <>
+      {/* Overlay */}
+      <div className="fixed inset-0 z-30 bg-black/20" onClick={onClose} />
+      {/* Panel */}
+      <div className="fixed right-0 top-0 z-40 h-full w-[420px] border-l border-border bg-surface overflow-y-auto shadow-xl transition-transform duration-200 translate-x-0">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-text-primary">{ticket.identifier}</span>
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: '#6366f118',
+                color: '#6366f1',
+                border: '1px solid #6366f130',
+              }}
+            >
+              {ticket.team.key}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-5 p-5">
+          {/* Title */}
+          <h2 className="text-base font-semibold leading-snug text-text-primary">{ticket.title}</h2>
+
+          {/* Status */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">Status</span>
+            <div>
+              <span
+                className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{
+                  backgroundColor: ticket.state.color + '18',
+                  color: ticket.state.color,
+                }}
+              >
+                {ticket.state.name}
+              </span>
+            </div>
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">Priority</span>
+            <div className="flex items-center gap-2">
+              <PrioIcon size={14} style={{ color: prio.color }} />
+              <span className="text-sm text-text-primary">{prio.label}</span>
+            </div>
+          </div>
+
+          {/* Assignee */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">Assignee</span>
+            <div className="flex items-center gap-2">
+              {ticket.assignee ? (
+                <>
+                  <div
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                    style={{ backgroundColor: avatarColor(ticket.assignee.name) }}
+                  >
+                    {getInitials(ticket.assignee.name)}
+                  </div>
+                  <span className="text-sm text-text-primary">{ticket.assignee.name}</span>
+                </>
+              ) : (
+                <>
+                  <Circle className="h-6 w-6 text-border" strokeDasharray="3 3" />
+                  <span className="text-sm text-text-secondary">Unassigned</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Labels */}
+          {ticket.labels.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">Labels</span>
+              <div className="flex flex-wrap gap-1.5">
+                {ticket.labels.map((l) => (
+                  <span
+                    key={l.name}
+                    className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      backgroundColor: l.color + '18',
+                      color: l.color,
+                      border: `1px solid ${l.color}30`,
+                    }}
+                  >
+                    {l.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">Description</span>
+            <p className="text-sm leading-relaxed text-text-secondary">
+              {ticket.description || 'No description'}
+            </p>
+          </div>
+
+          {/* Timestamps */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-text-secondary">
+              <Clock size={12} />
+              <span>Created {formatDate(ticket.createdAt)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-text-secondary">
+              <Clock size={12} />
+              <span>Updated {formatDate(ticket.updatedAt)}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            {ticket.url && (
+              <a
+                href={ticket.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-2 rounded-md border border-border bg-surface-secondary px-3 py-2 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover"
+              >
+                <ExternalLink size={13} />
+                Open in Linear
+              </a>
+            )}
+            <button
+              onClick={assignToAI}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+            >
+              <Bot size={13} />
+              Assign to AI
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Ticket row ─────────────────────────────────────────────────────────
+
+function TicketRow({
+  ticket,
+  onClick,
+}: {
+  ticket: LinearIssue
+  onClick: (ticket: LinearIssue) => void
+}) {
+  const navigate = useNavigate()
+  const { addSession } = useSessionStore()
+  const prio = PRIORITY_META[ticket.priority]
+  const PrioIcon = prio.Icon
+
+  const assignToAI = useCallback(async () => {
+    try {
+      const session = await invoke<AISession>('spawn_claude_session', {
+        taskDescription: `${ticket.title}\n\n${ticket.description || ''}`.trim(),
+        repoPath: null,
+        ticketId: ticket.identifier,
+        model: null,
+      })
+      addSession(session)
+      navigate(`/sessions/${session.id}`)
+    } catch (e) {
+      console.error('Failed to assign to AI:', e)
+    }
+  }, [ticket, addSession, navigate])
+
+  return (
+    <div
+      className="group flex cursor-pointer items-center gap-3 border-b border-border px-4 py-2.5 transition-colors hover:bg-surface-hover"
+      onClick={() => onClick(ticket)}
+    >
       {/* Priority icon */}
       <div className="flex w-5 shrink-0 items-center justify-center" title={prio.label}>
         <PrioIcon size={14} style={{ color: prio.color }} />
@@ -336,24 +422,26 @@ function TicketRow({ ticket }: { ticket: LinearIssue }) {
 // ── Main component ─────────────────────────────────────────────────────
 
 export default function TicketsView() {
+  const { tickets, loading, error, refetch } = useTickets()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [priorityFilter, setPriorityFilter] = useState<string>('All')
   const [teamFilter, setTeamFilter] = useState<string>('All')
   const [sortBy, setSortBy] = useState<string>('Priority')
+  const [selectedTicket, setSelectedTicket] = useState<LinearIssue | null>(null)
 
   const teamNames = useMemo(() => {
-    const names = new Set(MOCK_TICKETS.map((t) => t.team.name))
+    const names = new Set(tickets.map((t) => t.team.name))
     return ['All', ...Array.from(names)]
-  }, [])
+  }, [tickets])
 
   const filtered = useMemo(() => {
-    let tickets = [...MOCK_TICKETS]
+    let list = [...tickets]
 
     // Search
     if (search) {
       const q = search.toLowerCase()
-      tickets = tickets.filter(
+      list = list.filter(
         (t) =>
           t.title.toLowerCase().includes(q) || t.identifier.toLowerCase().includes(q)
       )
@@ -361,30 +449,68 @@ export default function TicketsView() {
 
     // Status
     if (statusFilter !== 'All') {
-      tickets = tickets.filter((t) => t.state.name === statusFilter)
+      list = list.filter((t) => t.state.name === statusFilter)
     }
 
     // Priority
     if (priorityFilter !== 'All') {
       const pVal = PRIORITY_NAME_TO_VALUE[priorityFilter]
-      if (pVal !== undefined) tickets = tickets.filter((t) => t.priority === pVal)
+      if (pVal !== undefined) list = list.filter((t) => t.priority === pVal)
     }
 
     // Team
     if (teamFilter !== 'All') {
-      tickets = tickets.filter((t) => t.team.name === teamFilter)
+      list = list.filter((t) => t.team.name === teamFilter)
     }
 
     // Sort
-    tickets.sort((a, b) => {
+    list.sort((a, b) => {
       if (sortBy === 'Priority') return a.priority - b.priority
       if (sortBy === 'Created')
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
 
-    return tickets
-  }, [search, statusFilter, priorityFilter, teamFilter, sortBy])
+    return list
+  }, [tickets, search, statusFilter, priorityFilter, teamFilter, sortBy])
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        <span className="text-sm text-text-secondary">Loading tickets...</span>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <AlertTriangle className="h-8 w-8 text-red-400" />
+        <span className="text-sm text-text-secondary">{error}</span>
+        <button
+          onClick={refetch}
+          className="rounded-md border border-border bg-surface-secondary px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  // Empty state (no API key or no tickets)
+  if (tickets.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2">
+        <Circle className="h-8 w-8 text-text-secondary" strokeDasharray="3 3" />
+        <span className="text-sm text-text-secondary">
+          Connect your Linear account in Settings to see your tickets.
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -453,9 +579,16 @@ export default function TicketsView() {
             No tickets match your filters.
           </div>
         ) : (
-          filtered.map((ticket) => <TicketRow key={ticket.id} ticket={ticket} />)
+          filtered.map((ticket) => (
+            <TicketRow key={ticket.id} ticket={ticket} onClick={setSelectedTicket} />
+          ))
         )}
       </div>
+
+      {/* Ticket detail panel */}
+      {selectedTicket && (
+        <TicketDetailPanel ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      )}
     </div>
   )
 }

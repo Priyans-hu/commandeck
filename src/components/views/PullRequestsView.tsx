@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   GitPullRequest,
-  GitMerge,
   Check,
   X,
   Loader2,
@@ -9,170 +8,54 @@ import {
   Eye,
   ThumbsUp,
   MessageSquareWarning,
+  ExternalLink,
+  FileCode,
+  Plus,
+  Minus as MinusIcon,
 } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/core'
 import type { PullRequest } from '../../types'
+import { usePullRequests } from '../../hooks/usePullRequests'
+import { useSettingsStore } from '../../stores/settingsStore'
 
-// Extended PR type for view-specific fields not in base type
-interface PRViewData extends PullRequest {
-  state: 'open' | 'draft' | 'closed' | 'merged'
-  authorInitials: string
-  authorColor: string
-  isReviewRequested: boolean
+// --- Helpers ---
+
+interface DiffFile {
+  filename: string
+  status: string
+  additions: number
+  deletions: number
+  patch: string | null
 }
 
-const MOCK_PRS: PRViewData[] = [
-  {
-    id: '1',
-    title: 'feat: add OAuth2 PKCE flow for GitHub integration',
-    repoName: 'core',
-    repoOwner: 'commandeck',
-    number: 47,
-    sourceBranch: 'feat/oauth-pkce',
-    targetBranch: 'main',
-    author: 'Priyanshu',
-    authorAvatar: '',
-    additions: 142,
-    deletions: 38,
-    reviewStatus: 'approved',
-    ciStatus: 'passing',
-    createdAt: '2026-03-12T06:00:00Z',
-    updatedAt: '2026-03-12T08:00:00Z',
-    isDraft: false,
-    url: '#',
-    state: 'open',
-    authorInitials: 'PG',
-    authorColor: '#6366f1',
-    isReviewRequested: false,
-  },
-  {
-    id: '2',
-    title: 'fix: resolve race condition in WebSocket reconnection logic',
-    repoName: 'core',
-    repoOwner: 'commandeck',
-    number: 45,
-    sourceBranch: 'fix/ws-reconnect',
-    targetBranch: 'main',
-    author: 'Priyanshu',
-    authorAvatar: '',
-    additions: 67,
-    deletions: 23,
-    reviewStatus: 'changes_requested',
-    ciStatus: 'failing',
-    createdAt: '2026-03-11T08:00:00Z',
-    updatedAt: '2026-03-12T07:00:00Z',
-    isDraft: false,
-    url: '#',
-    state: 'open',
-    authorInitials: 'PG',
-    authorColor: '#6366f1',
-    isReviewRequested: false,
-  },
-  {
-    id: '3',
-    title: 'chore: migrate from Webpack to Vite for dev server',
-    repoName: 'dashboard',
-    repoOwner: 'commandeck',
-    number: 42,
-    sourceBranch: 'chore/vite-migration',
-    targetBranch: 'main',
-    author: 'Priyanshu',
-    authorAvatar: '',
-    additions: 312,
-    deletions: 487,
-    reviewStatus: 'pending',
-    ciStatus: 'pending',
-    createdAt: '2026-03-09T10:00:00Z',
-    updatedAt: '2026-03-12T06:00:00Z',
-    isDraft: true,
-    url: '#',
-    state: 'draft',
-    authorInitials: 'PG',
-    authorColor: '#6366f1',
-    isReviewRequested: false,
-  },
-  {
-    id: '4',
-    title: 'feat: implement notification preferences panel',
-    repoName: 'core',
-    repoOwner: 'commandeck',
-    number: 46,
-    sourceBranch: 'feat/notification-prefs',
-    targetBranch: 'main',
-    author: 'Alex Chen',
-    authorAvatar: '',
-    additions: 234,
-    deletions: 12,
-    reviewStatus: 'pending',
-    ciStatus: 'passing',
-    createdAt: '2026-03-12T03:00:00Z',
-    updatedAt: '2026-03-12T07:30:00Z',
-    isDraft: false,
-    url: '#',
-    state: 'open',
-    authorInitials: 'AC',
-    authorColor: '#22c55e',
-    isReviewRequested: true,
-  },
-  {
-    id: '5',
-    title: 'refactor: extract sidebar into composable layout system',
-    repoName: 'dashboard',
-    repoOwner: 'commandeck',
-    number: 44,
-    sourceBranch: 'refactor/sidebar-layout',
-    targetBranch: 'main',
-    author: 'Maya Patel',
-    authorAvatar: '',
-    additions: 89,
-    deletions: 156,
-    reviewStatus: 'approved',
-    ciStatus: 'passing',
-    createdAt: '2026-03-11T20:00:00Z',
-    updatedAt: '2026-03-12T04:00:00Z',
-    isDraft: false,
-    url: '#',
-    state: 'open',
-    authorInitials: 'MP',
-    authorColor: '#f59e0b',
-    isReviewRequested: true,
-  },
-  {
-    id: '6',
-    title: 'fix: dark mode color contrast issues on settings page',
-    repoName: 'dashboard',
-    repoOwner: 'commandeck',
-    number: 41,
-    sourceBranch: 'fix/dark-mode-contrast',
-    targetBranch: 'main',
-    author: 'Sam Lee',
-    authorAvatar: '',
-    additions: 28,
-    deletions: 19,
-    reviewStatus: 'approved',
-    ciStatus: 'passing',
-    createdAt: '2026-03-10T09:00:00Z',
-    updatedAt: '2026-03-10T15:00:00Z',
-    isDraft: false,
-    url: '#',
-    state: 'merged',
-    authorInitials: 'SL',
-    authorColor: '#ef4444',
-    isReviewRequested: true,
-  },
-]
+function getAuthorInitials(author: string): string {
+  return author.slice(0, 2).toUpperCase()
+}
+
+function getAuthorColor(author: string): string {
+  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#06b6d4']
+  let hash = 0
+  for (let i = 0; i < author.length; i++) hash = author.charCodeAt(i) + ((hash << 5) - hash)
+  return colors[Math.abs(hash) % colors.length]
+}
+
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  if (hours < 1) return 'just now'
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
 
 // --- Sub-components ---
 
-function StatusIcon({ state }: { state: PRViewData['state'] }) {
+function StatusIcon({ state }: { state: 'open' | 'draft' }) {
   switch (state) {
     case 'open':
       return <GitPullRequest className="h-4 w-4 text-success" />
     case 'draft':
       return <GitPullRequest className="h-4 w-4 text-text-secondary" />
-    case 'closed':
-      return <GitPullRequest className="h-4 w-4 text-danger" />
-    case 'merged':
-      return <GitMerge className="h-4 w-4 text-accent" />
   }
 }
 
@@ -219,44 +102,268 @@ function ReviewBadge({ status }: { status: PullRequest['reviewStatus'] }) {
   )
 }
 
-function getTimeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  if (hours < 1) return 'just now'
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
+// --- PR Detail Panel ---
+
+function PRDetailPanel({
+  pr,
+  onClose,
+}: {
+  pr: PullRequest
+  onClose: () => void
+}) {
+  const githubToken = useSettingsStore((s) => s.githubToken)
+  const [diffFiles, setDiffFiles] = useState<DiffFile[]>([])
+  const [diffLoading, setDiffLoading] = useState(true)
+  const [diffError, setDiffError] = useState<string | null>(null)
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set())
+
+  const state = pr.isDraft ? 'draft' : 'open'
+
+  const fetchDiff = useCallback(async () => {
+    if (!githubToken) {
+      setDiffLoading(false)
+      return
+    }
+
+    try {
+      const files = await invoke<DiffFile[]>('fetch_pr_diff', {
+        token: githubToken,
+        owner: pr.repoOwner,
+        repo: pr.repoName,
+        prNumber: pr.number,
+      })
+      setDiffFiles(files)
+    } catch (err) {
+      setDiffError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setDiffLoading(false)
+    }
+  }, [githubToken, pr.repoOwner, pr.repoName, pr.number])
+
+  useEffect(() => {
+    fetchDiff()
+  }, [fetchDiff])
+
+  const toggleFile = (filename: string) => {
+    setExpandedFiles((prev) => {
+      const next = new Set(prev)
+      if (next.has(filename)) next.delete(filename)
+      else next.add(filename)
+      return next
+    })
+  }
+
+  const statusBadgeColor: Record<string, string> = {
+    added: 'text-success bg-success/10 border-success/25',
+    modified: 'text-warning bg-warning/10 border-warning/25',
+    removed: 'text-danger bg-danger/10 border-danger/25',
+    renamed: 'text-accent bg-accent/10 border-accent/25',
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-30 bg-black/20" onClick={onClose} />
+      <div className="fixed right-0 top-0 z-40 h-full w-[480px] border-l border-border bg-surface overflow-y-auto shadow-xl">
+        <div className="p-5">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <StatusIcon state={state} />
+              {pr.isDraft && (
+                <span className="rounded border border-border bg-surface-secondary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+                  Draft
+                </span>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Title */}
+          <h2 className="text-lg font-semibold text-text-primary mb-2">{pr.title}</h2>
+
+          {/* Repo + PR number */}
+          <p className="text-sm text-text-secondary mb-4">
+            <span className="font-medium">{pr.repoOwner}/{pr.repoName}</span>
+            <span className="ml-2 text-border">#{pr.number}</span>
+          </p>
+
+          {/* Branch flow */}
+          <div className="flex items-center gap-2 mb-4">
+            <code className="rounded bg-surface-secondary px-2 py-1 text-xs text-accent">
+              {pr.sourceBranch}
+            </code>
+            <ArrowRight className="h-3.5 w-3.5 text-text-secondary/60" />
+            <code className="rounded bg-surface-secondary px-2 py-1 text-xs text-text-secondary">
+              {pr.targetBranch}
+            </code>
+          </div>
+
+          {/* Author */}
+          <div className="flex items-center gap-2.5 mb-4">
+            <div
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ backgroundColor: getAuthorColor(pr.author) }}
+            >
+              {getAuthorInitials(pr.author)}
+            </div>
+            <span className="text-sm text-text-primary">{pr.author}</span>
+          </div>
+
+          {/* Badges row */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <ReviewBadge status={pr.reviewStatus} />
+            {pr.ciStatus !== 'none' && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-secondary">
+                  <CIStatusIcon status={pr.ciStatus} />
+                </div>
+                <span className="text-xs text-text-secondary capitalize">{pr.ciStatus}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Line changes */}
+          <div className="flex items-center gap-3 mb-5 font-mono text-sm">
+            <span className="flex items-center gap-1 text-success">
+              <Plus className="h-3.5 w-3.5" />
+              {pr.additions}
+            </span>
+            <span className="flex items-center gap-1 text-danger">
+              <MinusIcon className="h-3.5 w-3.5" />
+              {pr.deletions}
+            </span>
+          </div>
+
+          {/* Open in GitHub */}
+          <a
+            href={pr.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.preventDefault()
+              invoke('open_url', { url: pr.url }).catch(() => window.open(pr.url, '_blank'))
+            }}
+            className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-secondary px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-hover"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in GitHub
+          </a>
+
+          {/* Divider */}
+          <div className="border-t border-border mb-5" />
+
+          {/* File changes */}
+          <div>
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-text-primary mb-3">
+              <FileCode className="h-4 w-4 text-text-secondary" />
+              File Changes
+              {diffFiles.length > 0 && (
+                <span className="text-xs font-normal text-text-secondary">
+                  ({diffFiles.length} file{diffFiles.length !== 1 ? 's' : ''})
+                </span>
+              )}
+            </h3>
+
+            {diffLoading && (
+              <div className="flex items-center gap-2 py-4 text-sm text-text-secondary">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading diff...
+              </div>
+            )}
+
+            {diffError && (
+              <p className="py-4 text-sm text-danger">{diffError}</p>
+            )}
+
+            {!diffLoading && !diffError && diffFiles.length === 0 && (
+              <p className="py-4 text-sm text-text-secondary">No file changes found.</p>
+            )}
+
+            {!diffLoading && diffFiles.map((file) => (
+              <div key={file.filename} className="mb-2 rounded-lg border border-border overflow-hidden">
+                <button
+                  onClick={() => toggleFile(file.filename)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-hover"
+                >
+                  <span
+                    className={`inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase ${statusBadgeColor[file.status] || 'text-text-secondary bg-surface-secondary border-border'}`}
+                  >
+                    {file.status.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs font-mono text-text-primary">
+                    {file.filename}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[11px] font-mono">
+                    <span className="text-success">+{file.additions}</span>
+                    <span className="text-danger">-{file.deletions}</span>
+                  </span>
+                </button>
+
+                {expandedFiles.has(file.filename) && file.patch && (
+                  <div className="border-t border-border bg-surface-secondary/50 overflow-x-auto">
+                    <pre className="p-3 text-[11px] leading-relaxed font-mono">
+                      {file.patch.split('\n').map((line, i) => {
+                        let lineClass = 'text-text-secondary'
+                        if (line.startsWith('+')) lineClass = 'text-success bg-success/5'
+                        else if (line.startsWith('-')) lineClass = 'text-danger bg-danger/5'
+                        else if (line.startsWith('@@')) lineClass = 'text-accent'
+
+                        return (
+                          <div key={i} className={`${lineClass} px-1`}>
+                            {line}
+                          </div>
+                        )
+                      })}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  )
 }
 
-function PRRow({ pr }: { pr: PRViewData }) {
-  const isDraft = pr.state === 'draft'
-  const isClosed = pr.state === 'closed' || pr.state === 'merged'
+// --- PR Row ---
+
+function PRRow({
+  pr,
+  onClick,
+}: {
+  pr: PullRequest
+  onClick: () => void
+}) {
+  const state = pr.isDraft ? 'draft' : 'open'
+  const initials = getAuthorInitials(pr.author)
+  const color = getAuthorColor(pr.author)
 
   return (
     <div
-      className={`group flex items-center gap-4 border-b border-border px-5 py-3.5 transition-colors hover:bg-surface-hover ${
-        isDraft ? 'opacity-60' : ''
+      onClick={onClick}
+      className={`group flex cursor-pointer items-center gap-4 border-b border-border px-5 py-3.5 transition-colors hover:bg-surface-hover ${
+        pr.isDraft ? 'opacity-60' : ''
       }`}
     >
       {/* Status icon */}
       <div className="flex-shrink-0 pt-0.5">
-        <StatusIcon state={pr.state} />
+        <StatusIcon state={state} />
       </div>
 
       {/* Main content */}
       <div className="min-w-0 flex-1">
         {/* Title line */}
         <div className="flex items-center gap-2">
-          <h3
-            className={`truncate text-sm font-medium ${
-              isClosed
-                ? 'text-text-secondary line-through decoration-text-secondary/40'
-                : 'text-text-primary'
-            }`}
-          >
+          <h3 className="truncate text-sm font-medium text-text-primary">
             {pr.title}
           </h3>
-          {isDraft && (
+          {pr.isDraft && (
             <span className="flex-shrink-0 rounded border border-border bg-surface-secondary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
               Draft
             </span>
@@ -309,28 +416,33 @@ function PRRow({ pr }: { pr: PRViewData }) {
         {/* Author avatar */}
         <div
           className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ backgroundColor: pr.authorColor }}
+          style={{ backgroundColor: color }}
           title={pr.author}
         >
-          {pr.authorInitials}
+          {initials}
         </div>
 
         {/* Quick action buttons (visible on hover) */}
         <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <button className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover">
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover"
+          >
             <Eye className="h-3.5 w-3.5" />
             Review
           </button>
-          {!isClosed && (
-            <>
-              <button className="flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/20">
-                <ThumbsUp className="h-3 w-3" />
-              </button>
-              <button className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/10 px-2 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/20">
-                <MessageSquareWarning className="h-3 w-3" />
-              </button>
-            </>
-          )}
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/20"
+          >
+            <ThumbsUp className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/10 px-2 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/20"
+          >
+            <MessageSquareWarning className="h-3 w-3" />
+          </button>
         </div>
       </div>
     </div>
@@ -343,13 +455,15 @@ type Tab = 'my_prs' | 'review_requested'
 
 export default function PullRequestsView() {
   const [activeTab, setActiveTab] = useState<Tab>('my_prs')
+  const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null)
 
-  const myPRs = MOCK_PRS.filter((pr) => !pr.isReviewRequested)
-  const reviewRequested = MOCK_PRS.filter((pr) => pr.isReviewRequested)
+  const { pullRequests, loading, error, refetch } = usePullRequests()
+  const githubUsername = useSettingsStore((s) => s.githubUsername)
+
+  const myPRs = pullRequests.filter((pr) => pr.author === githubUsername)
+  const reviewRequested = pullRequests.filter((pr) => pr.author !== githubUsername)
   const activePRs = activeTab === 'my_prs' ? myPRs : reviewRequested
-  const openCount = activePRs.filter(
-    (pr) => pr.state === 'open' || pr.state === 'draft'
-  ).length
+  const openCount = activePRs.length
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: 'my_prs', label: 'My PRs', count: myPRs.length },
@@ -359,6 +473,56 @@ export default function PullRequestsView() {
       count: reviewRequested.length,
     },
   ]
+
+  // Loading state
+  if (loading && pullRequests.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center text-center">
+          <Loader2 className="mb-3 h-8 w-8 animate-spin text-accent" />
+          <p className="text-sm text-text-secondary">Loading pull requests...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-danger/10">
+            <X className="h-7 w-7 text-danger" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium text-text-primary">Failed to load pull requests</h3>
+          <p className="mb-4 max-w-xs text-xs text-text-secondary">{error}</p>
+          <button
+            onClick={() => refetch()}
+            className="rounded-lg border border-border bg-surface-secondary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-hover"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Empty state (no GitHub connection)
+  if (!githubUsername && pullRequests.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-secondary">
+            <GitPullRequest className="h-7 w-7 text-text-secondary" />
+          </div>
+          <h3 className="mb-1 text-sm font-medium text-text-primary">No GitHub account connected</h3>
+          <p className="text-xs text-text-secondary">
+            Connect your GitHub account in Settings to see your pull requests.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -420,9 +584,16 @@ export default function PullRequestsView() {
             </div>
           </div>
         ) : (
-          activePRs.map((pr) => <PRRow key={pr.id} pr={pr} />)
+          activePRs.map((pr) => (
+            <PRRow key={pr.id} pr={pr} onClick={() => setSelectedPR(pr)} />
+          ))
         )}
       </div>
+
+      {/* PR Detail Panel */}
+      {selectedPR && (
+        <PRDetailPanel pr={selectedPR} onClose={() => setSelectedPR(null)} />
+      )}
     </div>
   )
 }

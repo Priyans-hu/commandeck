@@ -13,10 +13,17 @@ pub struct LinearIssue {
     pub state: IssueState,
     pub priority: IssuePriority,
     pub assignee_name: Option<String>,
-    pub labels: Vec<String>,
+    pub team: Option<LinearTeam>,
+    pub labels: Vec<IssueLabel>,
     pub created_at: String,
     pub updated_at: String,
     pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IssueLabel {
+    pub name: String,
+    pub color: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,10 +88,18 @@ struct IssueNode {
     priority: f64,
     priority_label: String,
     assignee: Option<AssigneeNode>,
+    team: Option<TeamNodeInline>,
     labels: LabelConnection,
     created_at: String,
     updated_at: String,
     url: String,
+}
+
+#[derive(Deserialize)]
+struct TeamNodeInline {
+    id: String,
+    name: String,
+    key: String,
 }
 
 #[derive(Deserialize)]
@@ -106,6 +121,7 @@ struct LabelConnection {
 #[derive(Deserialize)]
 struct LabelNode {
     name: String,
+    color: String,
 }
 
 // -- Teams
@@ -175,9 +191,15 @@ pub async fn fetch_issues(
                 assignee {{
                   name
                 }}
+                team {{
+                  id
+                  name
+                  key
+                }}
                 labels {{
                   nodes {{
                     name
+                    color
                   }}
                 }}
                 createdAt
@@ -205,7 +227,8 @@ pub async fn fetch_issues(
             state: IssueState { name: n.state.name, color: n.state.color },
             priority: IssuePriority { label: n.priority_label, number: n.priority as i32 },
             assignee_name: n.assignee.map(|a| a.name),
-            labels: n.labels.nodes.into_iter().map(|l| l.name).collect(),
+            team: n.team.map(|t| LinearTeam { id: t.id, name: t.name, key: t.key }),
+            labels: n.labels.nodes.into_iter().map(|l| IssueLabel { name: l.name, color: l.color }).collect(),
             created_at: n.created_at,
             updated_at: n.updated_at,
             url: n.url,
@@ -343,7 +366,11 @@ mod tests {
             state: IssueState { name: "In Progress".to_string(), color: "#f2c94c".to_string() },
             priority: IssuePriority { label: "High".to_string(), number: 2 },
             assignee_name: Some("Priyanshu".to_string()),
-            labels: vec!["bug".to_string(), "auth".to_string()],
+            team: Some(LinearTeam { id: "team-1".to_string(), name: "Server".to_string(), key: "SER".to_string() }),
+            labels: vec![
+                IssueLabel { name: "bug".to_string(), color: "#ef4444".to_string() },
+                IssueLabel { name: "auth".to_string(), color: "#6366f1".to_string() },
+            ],
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-02T00:00:00Z".to_string(),
             url: "https://linear.app/team/issue/SER-1234".to_string(),
@@ -362,7 +389,10 @@ mod tests {
         assert_eq!(deserialized.priority.label, "High");
         assert_eq!(deserialized.priority.number, 2);
         assert_eq!(deserialized.assignee_name, Some("Priyanshu".to_string()));
-        assert_eq!(deserialized.labels, vec!["bug", "auth"]);
+        assert_eq!(deserialized.team.as_ref().unwrap().name, "Server");
+        assert_eq!(deserialized.labels.len(), 2);
+        assert_eq!(deserialized.labels[0].name, "bug");
+        assert_eq!(deserialized.labels[0].color, "#ef4444");
     }
 
     #[test]
@@ -375,6 +405,7 @@ mod tests {
             state: IssueState { name: "Backlog".to_string(), color: "#bbb".to_string() },
             priority: IssuePriority { label: "No priority".to_string(), number: 0 },
             assignee_name: None,
+            team: None,
             labels: vec![],
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
@@ -385,6 +416,7 @@ mod tests {
         let deserialized: LinearIssue = serde_json::from_str(&json).unwrap();
         assert!(deserialized.description.is_none());
         assert!(deserialized.assignee_name.is_none());
+        assert!(deserialized.team.is_none());
         assert!(deserialized.labels.is_empty());
     }
 
@@ -461,9 +493,15 @@ mod tests {
                     assignee {{
                       name
                     }}
+                    team {{
+                      id
+                      name
+                      key
+                    }}
                     labels {{
                       nodes {{
                         name
+                        color
                       }}
                     }}
                     createdAt
@@ -482,6 +520,7 @@ mod tests {
         assert!(query.contains("identifier"));
         assert!(query.contains("priorityLabel"));
         assert!(query.contains("assignee"));
+        assert!(query.contains("team"));
         assert!(query.contains("labels"));
         assert!(query.contains("createdAt"));
         assert!(query.contains("updatedAt"));

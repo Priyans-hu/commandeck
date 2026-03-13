@@ -4,8 +4,10 @@ import type { ConnectionStatus } from '../types'
 
 interface SettingsState {
   githubToken: string
+  githubUsername: string
   linearApiKey: string
   slackBotToken: string
+  onboardingCompleted: boolean
   connections: {
     github: ConnectionStatus
     linear: ConnectionStatus
@@ -33,8 +35,10 @@ interface SettingsState {
   }
 
   setGithubToken: (token: string) => void
+  setGithubUsername: (username: string) => void
   setLinearApiKey: (key: string) => void
   setSlackBotToken: (token: string) => void
+  setOnboardingCompleted: (completed: boolean) => void
   setConnection: (service: 'github' | 'linear' | 'slack', status: ConnectionStatus) => void
   setNotificationPermission: (granted: boolean) => void
   setNotificationPreference: (type: keyof Omit<SettingsState['notifications'], 'permissionGranted'>, enabled: boolean) => void
@@ -52,8 +56,10 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       githubToken: '',
+      githubUsername: '',
       linearApiKey: '',
       slackBotToken: '',
+      onboardingCompleted: false,
       connections: {
         github: 'disconnected',
         linear: 'disconnected',
@@ -81,8 +87,10 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       setGithubToken: (token) => set({ githubToken: token }),
+      setGithubUsername: (username) => set({ githubUsername: username }),
       setLinearApiKey: (key) => set({ linearApiKey: key }),
       setSlackBotToken: (token) => set({ slackBotToken: token }),
+      setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
 
       setConnection: (service, status) =>
         set((state) => ({

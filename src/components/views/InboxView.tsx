@@ -1,16 +1,18 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   GitPullRequest,
   ListTodo,
-  MessageSquare,
   Inbox,
   ArrowRight,
   Circle,
+  Loader2,
 } from 'lucide-react'
+import { useTickets } from '../../hooks/useTickets'
+import { usePullRequests } from '../../hooks/usePullRequests'
 
-type ItemType = 'pr' | 'ticket' | 'mention'
+type ItemType = 'pr' | 'ticket'
 type Priority = 'urgent' | 'high' | 'medium' | 'low'
-type FilterTab = 'all' | 'pr' | 'ticket' | 'mention'
+type FilterTab = 'all' | 'pr' | 'ticket'
 
 interface InboxItem {
   id: string
@@ -22,49 +24,6 @@ interface InboxItem {
   priority: Priority
   author: string
 }
-
-const MOCK_ITEMS: InboxItem[] = [
-  {
-    id: '1',
-    type: 'pr',
-    title: 'Fix race condition in session cleanup',
-    source: 'commandeck/core',
-    timestamp: '25m ago',
-    status: 'Review requested',
-    priority: 'urgent',
-    author: 'alex',
-  },
-  {
-    id: '2',
-    type: 'ticket',
-    title: 'Dashboard widgets not loading on first visit',
-    source: 'Frontend Team',
-    timestamp: '2h ago',
-    status: 'In Progress',
-    priority: 'high',
-    author: 'sarah',
-  },
-  {
-    id: '3',
-    type: 'mention',
-    title: 'Mentioned you in: API rate limiting discussion',
-    source: 'commandeck/api',
-    timestamp: '4h ago',
-    status: 'Unread',
-    priority: 'medium',
-    author: 'mike',
-  },
-  {
-    id: '4',
-    type: 'pr',
-    title: 'Add dark mode toggle to settings panel',
-    source: 'commandeck/ui',
-    timestamp: '6h ago',
-    status: 'Changes requested',
-    priority: 'low',
-    author: 'jordan',
-  },
-]
 
 const TYPE_CONFIG: Record<
   ItemType,
@@ -84,11 +43,6 @@ const TYPE_CONFIG: Record<
     borderColor: 'border-l-blue-500',
     action: 'Open',
   },
-  mention: {
-    icon: MessageSquare,
-    borderColor: 'border-l-green-500',
-    action: 'Reply',
-  },
 }
 
 const PRIORITY_CONFIG: Record<Priority, { color: string; label: string }> = {
@@ -102,16 +56,71 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'pr', label: 'Pull Requests' },
   { key: 'ticket', label: 'Tickets' },
-  { key: 'mention', label: 'Mentions' },
 ]
+
+const TICKET_PRIORITY_MAP: Record<number, Priority> = {
+  0: 'low',
+  1: 'urgent',
+  2: 'high',
+  3: 'medium',
+  4: 'low',
+}
+
+const PR_STATUS_MAP: Record<string, string> = {
+  approved: 'Approved',
+  changes_requested: 'Changes Requested',
+  pending: 'Pending Review',
+  dismissed: 'No Reviews',
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
 
 export default function InboxView() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all')
+  const { tickets, loading: ticketsLoading } = useTickets()
+  const { pullRequests, loading: prsLoading } = usePullRequests()
+  const loading = ticketsLoading || prsLoading
+
+  const inboxItems = useMemo(() => {
+    const ticketItems: InboxItem[] = tickets.map((ticket) => ({
+      id: ticket.id,
+      type: 'ticket',
+      title: ticket.title,
+      source: ticket.team.name,
+      timestamp: ticket.updatedAt,
+      status: ticket.state.name,
+      priority: TICKET_PRIORITY_MAP[ticket.priority] ?? 'low',
+      author: ticket.assignee?.name || 'Unassigned',
+    }))
+
+    const prItems: InboxItem[] = pullRequests.map((pr) => ({
+      id: pr.id,
+      type: 'pr',
+      title: pr.title,
+      source: `${pr.repoOwner}/${pr.repoName}`,
+      timestamp: pr.updatedAt,
+      status: PR_STATUS_MAP[pr.reviewStatus] ?? pr.reviewStatus,
+      priority: 'medium' as Priority,
+      author: pr.author,
+    }))
+
+    return [...ticketItems, ...prItems].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+  }, [tickets, pullRequests])
 
   const filteredItems =
     activeFilter === 'all'
-      ? MOCK_ITEMS
-      : MOCK_ITEMS.filter((item) => item.type === activeFilter)
+      ? inboxItems
+      : inboxItems.filter((item) => item.type === activeFilter)
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -141,7 +150,14 @@ export default function InboxView() {
       </div>
 
       {/* Items */}
-      {filteredItems.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface-secondary py-16">
+          <Loader2 className="mb-3 h-10 w-10 animate-spin text-text-secondary/50" />
+          <p className="text-sm font-medium text-text-secondary">
+            Loading items...
+          </p>
+        </div>
+      ) : filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface-secondary py-16">
           <Inbox className="mb-3 h-10 w-10 text-text-secondary/50" />
           <p className="text-sm font-medium text-text-secondary">
@@ -176,7 +192,7 @@ export default function InboxView() {
                   <div className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
                     <span>{item.source}</span>
                     <Circle className="h-1 w-1 fill-current" />
-                    <span>{item.timestamp}</span>
+                    <span>{timeAgo(item.timestamp)}</span>
                     <Circle className="h-1 w-1 fill-current" />
                     <span>{item.author}</span>
                   </div>
