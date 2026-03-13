@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../stores/settingsStore'
 import type { PullRequest } from '../types'
@@ -89,6 +89,15 @@ export function usePullRequests() {
   useEffect(() => {
     refetch()
   }, [refetch])
+
+  // Poll every 60 seconds
+  const refetchRef = useRef(refetch)
+  refetchRef.current = refetch
+  useEffect(() => {
+    if (!githubToken || !githubUsername) return
+    const id = setInterval(() => refetchRef.current(), 60_000)
+    return () => clearInterval(id)
+  }, [githubToken, githubUsername])
 
   return { pullRequests, loading, error, refetch }
 }

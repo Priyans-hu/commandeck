@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../stores/settingsStore'
 import type { LinearIssue } from '../types'
@@ -107,6 +107,15 @@ export function useTickets() {
   useEffect(() => {
     refetch()
   }, [refetch])
+
+  // Poll every 60 seconds
+  const refetchRef = useRef(refetch)
+  refetchRef.current = refetch
+  useEffect(() => {
+    if (!linearApiKey) return
+    const id = setInterval(() => refetchRef.current(), 60_000)
+    return () => clearInterval(id)
+  }, [linearApiKey])
 
   return { tickets, loading, error, refetch }
 }
