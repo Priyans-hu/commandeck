@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import {
   Github,
   MessageSquare,
@@ -475,21 +476,31 @@ export default function SettingsView() {
   )
   const [localViewMode, setLocalViewMode] = useState<ViewMode>(viewMode)
 
-  // Simulate connection test
+  // Test connection via real API calls (Tauri invoke)
   const testConnection = useCallback(
-    (service: 'github' | 'linear' | 'slack') => {
+    async (service: 'github' | 'linear' | 'slack') => {
       store.setConnection(service, 'connecting')
-      setTimeout(() => {
-        const token =
-          service === 'github'
-            ? ghToken
-            : service === 'linear'
-              ? linearKey
-              : slackToken
-        store.setConnection(service, token.trim().length > 8 ? 'connected' : 'error')
-      }, 1500)
+
+      if (service === 'slack') {
+        // Slack is "coming soon" — keep simulated behaviour
+        setTimeout(() => {
+          store.setConnection(service, slackToken.trim().length > 8 ? 'connected' : 'error')
+        }, 1500)
+        return
+      }
+
+      try {
+        if (service === 'github') {
+          await invoke('fetch_pull_requests', { token: ghToken, username: ghUsername || 'test' })
+        } else if (service === 'linear') {
+          await invoke('fetch_teams', { apiKey: linearKey })
+        }
+        store.setConnection(service, 'connected')
+      } catch {
+        store.setConnection(service, 'error')
+      }
     },
-    [ghToken, linearKey, slackToken, store],
+    [ghToken, ghUsername, linearKey, slackToken, store],
   )
 
   // Request notification permission (simulated Tauri notification API)

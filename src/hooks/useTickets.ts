@@ -19,11 +19,36 @@ interface RustLinearIssue {
 }
 
 function inferStateType(name: string): LinearIssue['state']['type'] {
-  const lower = name.toLowerCase()
-  if (lower === 'in progress' || lower === 'in review') return 'started'
-  if (lower === 'todo' || lower === 'backlog') return 'unstarted'
-  if (lower === 'done') return 'completed'
-  if (lower === 'canceled' || lower === 'cancelled') return 'canceled'
+  const lower = name.toLowerCase().trim()
+
+  // Completed states
+  if (['done', 'closed', 'merged', 'released', 'shipped', 'deployed'].includes(lower)) return 'completed'
+
+  // Canceled states
+  if (['canceled', 'cancelled', 'duplicate', "won't fix", 'wontfix', "won't do"].includes(lower)) return 'canceled'
+
+  // Started/active states
+  if (
+    lower.includes('progress') ||
+    lower.includes('review') ||
+    lower.includes('active') ||
+    lower.includes('doing') ||
+    lower.includes('started') ||
+    lower.includes('blocked') ||
+    lower.includes('waiting')
+  ) return 'started'
+
+  // Unstarted states
+  if (
+    lower === 'todo' ||
+    lower === 'to do' ||
+    lower === 'ready' ||
+    lower === 'planned' ||
+    lower === 'prioritized' ||
+    lower.includes('triag')
+  ) return 'unstarted'
+
+  // Default to backlog
   return 'backlog'
 }
 
