@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useAppStore } from './stores/appStore'
+import { useSettingsStore } from './stores/settingsStore'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import InboxView from './components/views/InboxView'
@@ -11,9 +13,19 @@ import SettingsView from './components/views/SettingsView'
 
 function App() {
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed)
+  const theme = useSettingsStore((s) => s.appearance.theme)
+  const density = useSettingsStore((s) => s.appearance.density)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-density', density)
+  }, [density])
 
   return (
-    <div className="flex h-screen bg-surface">
+    <div className="flex h-screen bg-surface" data-theme={theme} data-density={density}>
       <Sidebar />
       <div
         className="flex flex-1 flex-col overflow-hidden transition-all duration-200"

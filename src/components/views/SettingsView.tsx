@@ -757,12 +757,10 @@ export default function SettingsView() {
               />
               <SelectableCard
                 selected={theme === 'light'}
-                onClick={() => {}}
+                onClick={() => setTheme('light')}
                 icon={Sun}
                 label="Light"
                 description="Classic bright look"
-                badge="Coming soon"
-                disabled
               />
             </div>
           </div>
