@@ -228,13 +228,22 @@ export default function OnboardingWizard() {
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </button>
-              <button
-                onClick={next}
-                className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-              >
-                Next
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={next}
+                  className="text-sm text-text-secondary underline decoration-text-secondary/40 hover:text-text-primary"
+                >
+                  Skip, set up later
+                </button>
+                <button
+                  onClick={next}
+                  disabled={!githubOk && !linearOk}
+                  className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
