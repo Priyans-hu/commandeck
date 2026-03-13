@@ -527,14 +527,28 @@ export default function SettingsView() {
     setViewMode(localViewMode)
   }
 
+  const saveAll = () => {
+    saveConnections()
+    saveAI()
+    saveNotifications()
+    saveAppearance()
+    setSaved(true)
+  }
+
+  const [saved, setSaved] = useState(false)
+  useEffect(() => {
+    if (!saved) return
+    const t = setTimeout(() => setSaved(false), 2000)
+    return () => clearTimeout(t)
+  }, [saved])
+
   return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-10">
+    <div className="mx-auto max-w-2xl space-y-5 pb-20">
       {/* Connections */}
       <SectionCard
         icon={Link2}
         title="Connections"
         description="Connect your services to sync data into CommanDeck"
-        onSave={saveConnections}
       >
         <div className="space-y-3">
           <ConnectionRow
@@ -580,7 +594,6 @@ export default function SettingsView() {
         icon={Sparkles}
         title="AI Configuration"
         description="Configure AI model and automation behaviour"
-        onSave={saveAI}
       >
         <div className="space-y-4">
           {/* Model selector */}
@@ -674,7 +687,6 @@ export default function SettingsView() {
         icon={Bell}
         title="Notifications"
         description="Choose which events trigger desktop notifications"
-        onSave={saveNotifications}
       >
         <div className="space-y-4">
           {!notifPermission && (
@@ -739,7 +751,6 @@ export default function SettingsView() {
         icon={Palette}
         title="Appearance"
         description="Customize how CommanDeck looks and feels"
-        onSave={saveAppearance}
       >
         <div className="space-y-5">
           {/* Theme */}
@@ -865,6 +876,32 @@ export default function SettingsView() {
           </div>
         </div>
       </SectionCard>
+
+      {/* Global save footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-surface-secondary/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-2xl items-center justify-end px-5 py-3">
+          <button
+            onClick={saveAll}
+            className={`inline-flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-medium transition-all duration-200 ${
+              saved
+                ? 'bg-success/15 text-success'
+                : 'bg-accent text-white shadow-lg shadow-accent/20 hover:bg-accent-hover'
+            }`}
+          >
+            {saved ? (
+              <>
+                <CheckCircle2 size={16} />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                Save Changes
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
