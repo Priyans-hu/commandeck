@@ -1,6 +1,6 @@
 [package]
 name = "commandeck"
-version = "0.2.2"
+version = "0.2.3"
 description = "Unified work dashboard with AI dispatch"
 authors = ["Priyanshu"]
 license = "AGPL-3.0"
