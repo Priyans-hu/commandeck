@@ -428,7 +428,7 @@ function LinearIcon({ size = 18, className = '' }: { size?: number; className?: 
 // Update checker
 // ---------------------------------------------------------------------------
 
-const CURRENT_VERSION = '0.2.1'
+const CURRENT_VERSION = '0.2.2'
 
 function UpdateChecker() {
   const [state, setState] = useState<'idle' | 'checking' | 'up-to-date' | 'update-available' | 'error'>('idle')
